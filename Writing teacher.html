@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutor de Escritura en Inglés</title>
+    <!-- Incluir Tailwind CSS desde CDN para el estilo -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Fuente personalizada para un toque más moderno y legible */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Estilos personalizados para la barra de desplazamiento */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen bg-gradient-to-br from-blue-400 to-purple-600 text-gray-800">
+
+    <!-- Encabezado de la aplicación -->
+    <header class="bg-white p-4 shadow-md flex items-center justify-center">
+        <h1 class="text-3xl font-extrabold text-purple-700 flex items-center">
+            <span role="img" aria-label="lápiz" class="mr-2 text-4xl">📝</span>
+            Tutor de Escritura en Inglés
+            <span role="img" aria-label="cerebro" class="ml-2 text-4xl">🧠</span>
+        </h1>
+    </header>
+
+    <!-- Área de chat -->
+    <main id="chatContainer" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+        <!-- El contenido del chat se añadirá aquí dinámicamente -->
+    </main>
+
+    <!-- Área de entrada de texto -->
+    <footer class="bg-white p-4 shadow-lg flex items-center">
+        <textarea
+            id="inputMessage"
+            class="flex-1 p-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-purple-200 resize-none h-20 mr-4 text-lg placeholder-gray-500 transition-all duration-200"
+            placeholder="Escribe tu frase o párrafo en inglés aquí..."
+            aria-label="Campo para escribir tu mensaje en inglés"
+        ></textarea>
+        <button
+            id="sendButton"
+            class="px-6 py-3 rounded-xl font-bold text-lg shadow-md transition-all duration-300 transform bg-purple-600 hover:bg-purple-700 text-white hover:-translate-y-1 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-300 flex items-center justify-center"
+            aria-label="Enviar mensaje"
+        >
+            Enviar <span role="img" aria-label="cohete" class="ml-2">🚀</span>
+        </button>
+    </footer>
+
+    <!-- Script JavaScript para la funcionalidad de la aplicación -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatContainer = document.getElementById('chatContainer');
+            const inputMessage = document.getElementById('inputMessage');
+            const sendButton = document.getElementById('sendButton');
+
+            let isLoading = false;
+
+            // Función para añadir un mensaje al chat
+            const appendMessage = (text, type) => {
+                const messageWrapper = document.createElement('div');
+                messageWrapper.className = `flex ${type === 'user' ? 'justify-end' : 'justify-start'}`;
+
+                const messageBubble = document.createElement('div');
+                messageBubble.className = `max-w-3/4 p-4 rounded-2xl shadow-md ${
+                    type === 'user'
+                        ? 'bg-blue-200 text-blue-900 rounded-br-none'
+                        : 'bg-white text-gray-800 rounded-bl-none'
+                }`;
+                
+                const messageText = document.createElement('p');
+                messageText.className = "whitespace-pre-wrap";
+                messageText.textContent = text;
+                
+                messageBubble.appendChild(messageText);
+                messageWrapper.appendChild(messageBubble);
+                chatContainer.appendChild(messageWrapper);
+                
+                // Desplazar el chat al final
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            };
+
+            // Mensaje de bienvenida inicial
+            appendMessage('¡Hola! 👋 Soy tu tutor de inglés. Escribe una frase o párrafo en inglés y te ayudaré a corregirlo y mejorarlo. ¡Vamos a aprender juntos! ✨', 'bot');
+
+            // Función para manejar el envío de mensajes
+            const sendMessage = async () => {
+                const textToSend = inputMessage.value.trim();
+                if (!textToSend || isLoading) return;
+
+                // Añadir el mensaje del usuario al chat
+                appendMessage(textToSend, 'user');
+                inputMessage.value = '';
+
+                isLoading = true;
+                sendButton.disabled = true;
+                sendButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+                sendButton.classList.remove('bg-purple-600', 'hover:bg-purple-700', 'hover:-translate-y-1', 'hover:scale-105', 'focus:ring-purple-300');
+
+                const loadingMessageId = Date.now();
+                appendMessage('El tutor está pensando... 🤔', 'bot');
+                
+                try {
+                    const chatHistory = [
+                        {
+                            role: 'user',
+                            parts: [
+                                {
+                                    text: `Actúa como un tutor de inglés amigable para estudiantes de secundaria (12-16 años).
+                                    Analiza la siguiente frase o párrafo en inglés.
+                                    Proporciona:
+                                    1. Una versión corregida.
+                                    2. Una explicación clara y concisa de los errores gramaticales o de vocabulario.
+                                    3. Sugerencias para mejorar la expresión, el estilo o el vocabulario, con ejemplos si es posible.
+                                    Usa un tono alentador y amigable, con emojis.
+
+                                    Texto del alumno: "${textToSend}"`,
+                                },
+                            ],
+                        },
+                    ];
+
+                    const payload = {
+                        contents: chatHistory,
+                    };
+                    const apiKey = "";
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+
+                    const result = await response.json();
+
+                    // Eliminar el mensaje de carga
+                    chatContainer.removeChild(chatContainer.lastChild);
+
+                    if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
+                        const botResponseText = result.candidates[0].content.parts[0].text;
+                        appendMessage(botResponseText, 'bot');
+                    } else {
+                        appendMessage('Oops! Parece que no pude procesar tu solicitud. ¿Podrías intentarlo de nuevo? 🤔', 'bot');
+                        console.error('Respuesta inesperada de la API de Gemini:', result);
+                    }
+                } catch (error) {
+                    chatContainer.removeChild(chatContainer.lastChild);
+                    appendMessage('¡Vaya! Algo salió mal al intentar conectar con el tutor. Por favor, revisa tu conexión a internet e inténtalo de nuevo. 📡', 'bot');
+                    console.error('Error al llamar a la API de Gemini:', error);
+                } finally {
+                    isLoading = false;
+                    sendButton.disabled = false;
+                    sendButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                    sendButton.classList.add('bg-purple-600', 'hover:bg-purple-700', 'hover:-translate-y-1', 'hover:scale-105', 'focus:ring-purple-300');
+                }
+            };
+
+            // Event listener para el botón de enviar
+            sendButton.addEventListener('click', sendMessage);
+
+            // Event listener para la tecla Enter en el textarea
+            inputMessage.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault(); // Prevenir salto de línea en el textarea
+                    sendMessage();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
